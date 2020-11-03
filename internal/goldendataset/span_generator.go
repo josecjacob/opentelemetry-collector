@@ -84,8 +84,8 @@ func GenerateSpans(count int, startPos int, pictFile string, random io.Reader) (
 	index := startPos + 1
 	var inputs []string
 	var spanInputs *PICTSpanInputs
-	var traceID []byte
-	var parentID []byte
+	var traceID otlpcommon.TraceID
+	var parentID otlpcommon.SpanID
 	for i := 0; i < count; i++ {
 		if index >= pairsTotal {
 			index = 1
@@ -103,13 +103,13 @@ func GenerateSpans(count int, startPos int, pictFile string, random io.Reader) (
 		switch spanInputs.Parent {
 		case SpanParentRoot:
 			traceID = generateTraceID(random)
-			parentID = nil
+			parentID = otlpcommon.NewSpanID([8]byte{})
 		case SpanParentChild:
 			// use existing if available
-			if traceID == nil {
+			if !traceID.IsValid() {
 				traceID = generateTraceID(random)
 			}
-			if parentID == nil {
+			if !parentID.IsValid() {
 				parentID = generateSpanID(random)
 			}
 		}
@@ -134,7 +134,7 @@ func generateSpanName(spanInputs *PICTSpanInputs) string {
 //   random - the random number generator to use in generating ID values
 //
 // The generated span is returned.
-func GenerateSpan(traceID []byte, parentID []byte, spanName string, spanInputs *PICTSpanInputs,
+func GenerateSpan(traceID otlpcommon.TraceID, parentID otlpcommon.SpanID, spanName string, spanInputs *PICTSpanInputs,
 	random io.Reader) *otlptrace.Span {
 	endTime := time.Now().Add(-50 * time.Microsecond)
 	return &otlptrace.Span{
@@ -188,7 +188,7 @@ func lookupSpanKind(kind PICTInputKind) otlptrace.Span_SpanKind {
 	}
 }
 
-func generateSpanAttributes(spanTypeID PICTInputAttributes, statusStr PICTInputStatus) []*otlpcommon.KeyValue {
+func generateSpanAttributes(spanTypeID PICTInputAttributes, statusStr PICTInputStatus) []otlpcommon.KeyValue {
 	includeStatus := SpanStatusNil != statusStr
 	var attrs map[string]interface{}
 	switch spanTypeID {
@@ -511,7 +511,7 @@ func generateSpanEvent(index int) *otlptrace.Span_Event {
 	}
 }
 
-func generateEventAttributes(index int) []*otlpcommon.KeyValue {
+func generateEventAttributes(index int) []otlpcommon.KeyValue {
 	if index%4 == 2 {
 		return nil
 	}
@@ -542,7 +542,7 @@ func generateSpanLink(random io.Reader, index int) *otlptrace.Span_Link {
 	}
 }
 
-func generateLinkAttributes(index int) []*otlpcommon.KeyValue {
+func generateLinkAttributes(index int) []otlpcommon.KeyValue {
 	if index%4 == 2 {
 		return nil
 	}

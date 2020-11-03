@@ -18,6 +18,7 @@
 package pdata
 
 import (
+	otlpcommon "go.opentelemetry.io/collector/internal/data/opentelemetry-proto-gen/common/v1"
 	otlptrace "go.opentelemetry.io/collector/internal/data/opentelemetry-proto-gen/trace/v1"
 )
 
@@ -576,7 +577,7 @@ func (ms Span) TraceID() TraceID {
 //
 // Important: This causes a runtime error if IsNil() returns "true".
 func (ms Span) SetTraceID(v TraceID) {
-	(*ms.orig).TraceId = []byte(v)
+	(*ms.orig).TraceId = otlpcommon.TraceID(v)
 }
 
 // SpanID returns the spanid associated with this Span.
@@ -590,7 +591,7 @@ func (ms Span) SpanID() SpanID {
 //
 // Important: This causes a runtime error if IsNil() returns "true".
 func (ms Span) SetSpanID(v SpanID) {
-	(*ms.orig).SpanId = []byte(v)
+	(*ms.orig).SpanId = otlpcommon.SpanID(v)
 }
 
 // TraceState returns the tracestate associated with this Span.
@@ -618,7 +619,7 @@ func (ms Span) ParentSpanID() SpanID {
 //
 // Important: This causes a runtime error if IsNil() returns "true".
 func (ms Span) SetParentSpanID(v SpanID) {
-	(*ms.orig).ParentSpanId = []byte(v)
+	(*ms.orig).ParentSpanId = otlpcommon.SpanID(v)
 }
 
 // Name returns the name associated with this Span.
@@ -1175,7 +1176,7 @@ func (ms SpanLink) TraceID() TraceID {
 //
 // Important: This causes a runtime error if IsNil() returns "true".
 func (ms SpanLink) SetTraceID(v TraceID) {
-	(*ms.orig).TraceId = []byte(v)
+	(*ms.orig).TraceId = otlpcommon.TraceID(v)
 }
 
 // SpanID returns the spanid associated with this SpanLink.
@@ -1189,7 +1190,7 @@ func (ms SpanLink) SpanID() SpanID {
 //
 // Important: This causes a runtime error if IsNil() returns "true".
 func (ms SpanLink) SetSpanID(v SpanID) {
-	(*ms.orig).SpanId = []byte(v)
+	(*ms.orig).SpanId = otlpcommon.SpanID(v)
 }
 
 // TraceState returns the tracestate associated with this SpanLink.

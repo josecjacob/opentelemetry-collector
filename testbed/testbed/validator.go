@@ -15,7 +15,6 @@
 package testbed
 
 import (
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -128,7 +127,7 @@ func (v *CorrectnessTestValidator) assertSentRecdTracingDataEqual(tracesList []p
 		for _, rs := range resourceSpansList {
 			for _, ils := range rs.InstrumentationLibrarySpans {
 				for _, recdSpan := range ils.Spans {
-					sentSpan := v.dataProvider.GetGeneratedSpan(recdSpan.TraceId, recdSpan.SpanId)
+					sentSpan := v.dataProvider.GetGeneratedSpan(pdata.TraceID(recdSpan.TraceId), pdata.SpanID(recdSpan.SpanId))
 					v.diffSpan(sentSpan, recdSpan)
 				}
 			}
@@ -160,26 +159,26 @@ func (v *CorrectnessTestValidator) diffSpan(sentSpan *otlptrace.Span, recdSpan *
 }
 
 func (v *CorrectnessTestValidator) diffSpanTraceID(sentSpan *otlptrace.Span, recdSpan *otlptrace.Span) {
-	if hex.EncodeToString(sentSpan.TraceId) != hex.EncodeToString(recdSpan.TraceId) {
+	if sentSpan.TraceId.HexString() != recdSpan.TraceId.HexString() {
 		af := &TraceAssertionFailure{
 			typeName:      "Span",
 			dataComboName: sentSpan.Name,
 			fieldPath:     "TraceId",
-			expectedValue: hex.EncodeToString(sentSpan.TraceId),
-			actualValue:   hex.EncodeToString(recdSpan.TraceId),
+			expectedValue: sentSpan.TraceId.HexString(),
+			actualValue:   recdSpan.TraceId.HexString(),
 		}
 		v.assertionFailures = append(v.assertionFailures, af)
 	}
 }
 
 func (v *CorrectnessTestValidator) diffSpanSpanID(sentSpan *otlptrace.Span, recdSpan *otlptrace.Span) {
-	if hex.EncodeToString(sentSpan.SpanId) != hex.EncodeToString(recdSpan.SpanId) {
+	if sentSpan.SpanId.HexString() != recdSpan.SpanId.HexString() {
 		af := &TraceAssertionFailure{
 			typeName:      "Span",
 			dataComboName: sentSpan.Name,
 			fieldPath:     "SpanId",
-			expectedValue: hex.EncodeToString(sentSpan.SpanId),
-			actualValue:   hex.EncodeToString(recdSpan.SpanId),
+			expectedValue: sentSpan.SpanId.HexString(),
+			actualValue:   recdSpan.SpanId.HexString(),
 		}
 		v.assertionFailures = append(v.assertionFailures, af)
 	}
@@ -199,13 +198,13 @@ func (v *CorrectnessTestValidator) diffSpanTraceState(sentSpan *otlptrace.Span, 
 }
 
 func (v *CorrectnessTestValidator) diffSpanParentSpanID(sentSpan *otlptrace.Span, recdSpan *otlptrace.Span) {
-	if hex.EncodeToString(sentSpan.ParentSpanId) != hex.EncodeToString(recdSpan.ParentSpanId) {
+	if sentSpan.ParentSpanId.HexString() != recdSpan.ParentSpanId.HexString() {
 		af := &TraceAssertionFailure{
 			typeName:      "Span",
 			dataComboName: sentSpan.Name,
 			fieldPath:     "ParentSpanId",
-			expectedValue: hex.EncodeToString(sentSpan.ParentSpanId),
-			actualValue:   hex.EncodeToString(recdSpan.ParentSpanId),
+			expectedValue: sentSpan.ParentSpanId.HexString(),
+			actualValue:   recdSpan.ParentSpanId.HexString(),
 		}
 		v.assertionFailures = append(v.assertionFailures, af)
 	}
@@ -359,7 +358,7 @@ func (v *CorrectnessTestValidator) diffSpanLinks(sentSpan *otlptrace.Span, recdS
 	} else {
 		recdLinksMap := convertLinksSliceToMap(recdSpan.Links)
 		for i, sentLink := range sentSpan.Links {
-			spanID := hex.EncodeToString(sentLink.SpanId)
+			spanID := sentLink.SpanId.HexString()
 			recdLink, ok := recdLinksMap[spanID]
 			if ok {
 				v.diffAttributesSlice(sentSpan.Name, sentLink.Attributes, recdLink.Attributes,
@@ -413,8 +412,8 @@ func (v *CorrectnessTestValidator) diffSpanStatus(sentSpan *otlptrace.Span, recd
 	}
 }
 
-func (v *CorrectnessTestValidator) diffAttributesSlice(spanName string, recdAttrs []*otlpcommon.KeyValue,
-	sentAttrs []*otlpcommon.KeyValue, fmtStr string) {
+func (v *CorrectnessTestValidator) diffAttributesSlice(spanName string, recdAttrs []otlpcommon.KeyValue,
+	sentAttrs []otlpcommon.KeyValue, fmtStr string) {
 	recdAttrsMap := convertAttributesSliceToMap(recdAttrs)
 	for _, sentAttr := range sentAttrs {
 		recdAttr, ok := recdAttrsMap[sentAttr.Key]
@@ -501,15 +500,15 @@ func (v *CorrectnessTestValidator) compareArrayList(spanName string, sentArray *
 	}
 }
 
-func convertAttributesSliceToMap(attributes []*otlpcommon.KeyValue) map[string]*otlpcommon.KeyValue {
-	attrMap := make(map[string]*otlpcommon.KeyValue)
+func convertAttributesSliceToMap(attributes []otlpcommon.KeyValue) map[string]otlpcommon.KeyValue {
+	attrMap := make(map[string]otlpcommon.KeyValue)
 	for _, attr := range attributes {
 		attrMap[attr.Key] = attr
 	}
 	return attrMap
 }
 
-func retrieveAttributeValue(attribute *otlpcommon.KeyValue) interface{} {
+func retrieveAttributeValue(attribute otlpcommon.KeyValue) interface{} {
 	if attribute.Value == nil || attribute.Value.Value == nil {
 		return nil
 	}
@@ -557,7 +556,7 @@ func sortEventsByTimestamp(eventList []*otlptrace.Span_Event) {
 func convertLinksSliceToMap(links []*otlptrace.Span_Link) map[string]*otlptrace.Span_Link {
 	eventMap := make(map[string]*otlptrace.Span_Link)
 	for _, link := range links {
-		eventMap[hex.EncodeToString(link.SpanId)] = link
+		eventMap[link.SpanId.HexString()] = link
 	}
 	return eventMap
 }
@@ -572,7 +571,7 @@ func notWithinOneMillisecond(sentNs uint64, recdNs uint64) bool {
 	return diff > uint64(1100000)
 }
 
-func convertKVListToJSONString(values []*otlpcommon.KeyValue) string {
+func convertKVListToJSONString(values []otlpcommon.KeyValue) string {
 	jsonStr, err := json.Marshal(convertKVListToRawMap(values))
 	if err == nil {
 		return string(jsonStr)
@@ -588,7 +587,7 @@ func convertArrayValuesToJSONString(values []*otlpcommon.AnyValue) string {
 	return ""
 }
 
-func convertKVListToRawMap(values []*otlpcommon.KeyValue) map[string]interface{} {
+func convertKVListToRawMap(values []otlpcommon.KeyValue) map[string]interface{} {
 	rawMap := make(map[string]interface{})
 	for _, kv := range values {
 		var value *otlpcommon.AnyValue = kv.GetValue()
